@@ -7,62 +7,85 @@ pygame.init()
 
 screen = pygame.display.set_mode((800, 700))
 pygame.display.set_caption('Tetris')
+fps = 60
 
-cell_size = 30
 # Colors
 colors_dict = {
     'red' : (255, 50, 20),
     'orange' : (255, 150, 30),
     'yellow' : (255, 215, 0),
-    'pink' : (219, 88, 197),
+    'pink' : (220, 90, 200),
     'green' : (115, 200, 60),
     'blue' : (0, 65, 170),
     'purple' : (100, 50, 150),
-    'color1': (97, 113, 255),
-    'color2': (0, 0, 0),
+    'field_border': (100, 115, 255),
+    'field_background': (0, 0, 0),
+    'text_start':(35, 255, 0),
+    'text_button':(210, 0, 210),
+    'text_lines':(255, 185, 40),
+    'text_level':(255, 185, 40),
+    'next_figure_border': (0, 0, 125),
+    'game_over':(255, 255, 255),
+    'game_over_background':(200,140,140,120),
 }
-
-font = pygame.font.Font(None, 40)
-font2 = pygame.font.Font(None, 35)
-font3 = pygame.font.Font(None, 25)
+# FONTS
+fonts_dict = {
+    'font' : pygame.font.Font(None, 40),
+    'font2' : pygame.font.Font(None, 35),
+    'font3' : pygame.font.Font(None, 25),
+    'font4' : pygame.font.Font(None, 50),
+    }
 
 menu_dict = {
-    'text1':{'text':'Press any button to start', 'color':colors_dict['color1'], 'font':font2, 'x/y':(460, 300)},
-    'text2':{'text':'use "LEFT ARROW" to move left', 'color':colors_dict['color1'], 'font':font3, 'x/y':(460, 360)},
-    'text3':{'text':'use "UP ARROW" to rotate figure', 'color':colors_dict['color1'], 'font':font3, 'x/y':(460, 390)},
-    'text4':{'text':'use "RIGHT ARROW" to move right', 'color':colors_dict['color1'], 'font':font3, 'x/y':(460, 420)},
-    'text5':{'text':'use F1 to move restart', 'color':colors_dict['color1'], 'font':font3, 'x/y':(460, 450)},
+    'text1':{'text':'Press any button to start', 'color':colors_dict['text_start'], 'font':fonts_dict['font2'], 'x/y':(460, 90)},
+    'text2':{'text':'use "LEFT ARROW" to move left', 'color':colors_dict['text_button'], 'font':fonts_dict['font3'], 'x/y':(460, 150)},
+    'text3':{'text':'use "UP ARROW" to rotate figure', 'color':colors_dict['text_button'], 'font':fonts_dict['font3'], 'x/y':(460, 180)},
+    'text4':{'text':'use "RIGHT ARROW" to move right', 'color':colors_dict['text_button'], 'font':fonts_dict['font3'], 'x/y':(460, 210)},
+    'text5':{'text':'use F1 to restart', 'color':colors_dict['text_button'], 'font':fonts_dict['font3'], 'x/y':(460, 240)}, 
+    'lines':{'text':'Lines: ', 'color':colors_dict['text_lines'], 'font':fonts_dict['font'], 'x/y':(460, 250)}, 
+    'level':{'text':'Level: ', 'color':colors_dict['text_level'], 'font':fonts_dict['font'], 'x/y':(460, 290)}, 
+    'Game_over':{'text':'Game over', 'color':colors_dict['game_over'], 'font':fonts_dict['font4'], 'x/y':(150, 300)}, 
 }
+
 
 
 class Game():
     is_game_started = False
+    game_over = False 
     field = [0 if cell < 200 else 1 for cell in range(210)]
+    cells_coordinates = []
     x_field = 90
     y_field = 50
     border_width = 10
-    cells_coordinates = []
     line_score = 0
+    level = 1
     
 
     def draw_field(self):
-        pygame.draw.rect(screen, colors_dict['color1'], (self.x_field - self.border_width, self.y_field - self.border_width, 320, 620), self.border_width)
-        pygame.draw.rect(screen, colors_dict['color2'], (self.x_field, self.y_field, 300, 600))
+        pygame.draw.rect(screen, colors_dict['field_border'], (self.x_field - self.border_width, self.y_field - self.border_width, 320, 620), self.border_width)
+        pygame.draw.rect(screen, colors_dict['field_background'], (self.x_field, self.y_field, 300, 600))
         for cell in self.cells_coordinates[:-10]:
             x = 90 + cell[0] * 30 + 1
             y = 50 + cell[1] * 30 + 1
             color_key = self.field[cell[1] * 10 + cell[0]]
             if color_key:
                 pygame.draw.rect(screen, colors_dict[color_key], (x, y, 28, 28))
-        
-        text1 = font.render(f'Lines: {self.line_score}', True, colors_dict['color1'])
-        screen.blit(text1, (460, 250))
+        if self.is_game_started == True:
+            self.draw_text(['lines'], f'{self.line_score}')
+            self.draw_text(['level'], f'{self.level}')
+
 
     def draw_menu(self):
         self.draw_field()
-        for key in menu_dict:
-            text = menu_dict[key]['font'].render(menu_dict[key]['text'], True, menu_dict[key]['color'])
-            screen.blit(text, menu_dict[key]['x/y'])
+        keys_list = ['text1', 'text2', 'text3', 'text4', 'text5']
+        self.draw_text(keys_list)
+
+
+    def draw_text(self, keys_list, add_text = ''):
+        for key in keys_list:
+            text = menu_dict[key]['font'].render(menu_dict[key]['text'] + add_text, True, menu_dict[key]['color'])
+            screen.blit(text, menu_dict[key]['x/y'])        
+
 
     def update_field(self, color):
         for cell in figure.coordinates_list:
@@ -76,8 +99,12 @@ class Game():
         figure.figure = []
         figure.next_figure = []
         figure.coordinates_list = []
+        self.level = 1
+        self.line_score = 0
         figure.x = 3
         figure.y = 0
+        figure.speed = 0.1
+        
 
     def check_for_filled_line(self):
         for row in range(20):
@@ -99,9 +126,20 @@ class Game():
                 if self.field[row*10 + column]:
                     self.cells_coordinates.append([column, row])
     
-    def game_over(self):
-        self.is_game_started = False
-        print('GAME OVER')
+
+    def draw_game_over(self):
+        screen2 = pygame.Surface((300,600), pygame.SRCALPHA)
+        screen2.fill(colors_dict['game_over_background'])
+        screen.blit(screen2, (90,50))
+        self.draw_text(['Game_over'])
+
+
+    def inrease_level(self):
+        counter = game.line_score // 10
+        if counter + 1 > self.level:
+            self.level = counter + 1
+            figure.speed = 0.1 + counter/ 100
+
 
 class Figures():
     figure = []
@@ -210,6 +248,7 @@ class Figures():
         self.next_dict_key = choice(list(self.figures_dict.keys()))   
         self.next_figure = self.figures_dict[self.next_dict_key][0]
 
+
     def start_next_figure(self):
         self.figure = self.next_figure
         self.rotation_counter = 0
@@ -224,10 +263,25 @@ class Figures():
 
     def rotate_figure(self):
         if self.rotation_counter < len(self.figures_dict[self.current_dict_key]) - 1:
-            self.rotation_counter += 1
+            check_rotation_counter = self.rotation_counter + 1
         else:
-            self.rotation_counter = 0
-        self.figure = self.figures_dict[self.current_dict_key][self.rotation_counter]
+            check_rotation_counter = 0
+
+        game.get_all_object_coordinates()
+        self.coordinates_list = []
+        figure_to_check = self.figures_dict[self.current_dict_key][check_rotation_counter]
+        rotation_allowed = True
+        for column in range(4):
+            for row in range(4):
+                if figure_to_check[row*4 + column] != 0:
+                    if column + self.x < 0 or column + self.x > 9:
+                        rotation_allowed = False
+                        break
+
+        if rotation_allowed:
+            self.rotation_counter = check_rotation_counter
+            self.figure = self.figures_dict[self.current_dict_key][self.rotation_counter]
+
 
     def draw_figure(self):
         for column in range(4):
@@ -237,7 +291,7 @@ class Figures():
                     y = self.y * 30 + game.y_field + 30 * row
                     color = self.figure[row*4 + column]
                     pygame.draw.rect(screen, colors_dict[color],(x, y, 30, 30))
-        pygame.draw.rect(screen, colors_dict['color1'], (460, 60, 160, 160), 10)            
+        pygame.draw.rect(screen, colors_dict['next_figure_border'], (460, 60, 160, 160), 10)            
         for column in range(4):
             for row in range(4):
                 if self.next_figure[row*4 + column] != 0:
@@ -247,94 +301,100 @@ class Figures():
                     pygame.draw.rect(screen, colors_dict[color],(x, y, 30, 30))
 
 
-    
     def falling_collision(self):
         game.get_all_object_coordinates()
         self.coordinates_list = []
         for column in range(4):
             for row in range(4):
                 if self.figure[row*4 + column] != 0:
-                    self.coordinates_list.append([column + self.x, row + self.y + 1])
+                    self.coordinates_list.append([column + self.x, row + round(self.y) + 1])
                     cell_color = self.figure[row*4 + column]
         for cell in self.coordinates_list:
             if cell in game.cells_coordinates:
                 if self.collision_for_next_figure:
-                    game.game_over()
+                    game.game_over = True
+                    game.is_game_started = False
                 else:
                     game.update_field(cell_color)
                     self.start_next_figure()
                 break
-        self.y += 1
-    
-    def move_to_left(self):
+        self.y += figure.speed
+
+
+    def check_collision(self, direction):
+        if direction == 'right':
+            add_to_x = 1
+        else:
+            add_to_x = -1
         game.get_all_object_coordinates()
         self.coordinates_list = []
         for column in range(4):
             for row in range(4):
                 if self.figure[row*4 + column] != 0:
-                    self.coordinates_list.append([column + self.x - 1, row + self.y])
-        
-        moving_allowed = True    
+                    self.coordinates_list.append([column + self.x + add_to_x, row + self.y])
+
+        moving_allowed = True   
         for cell in self.coordinates_list:
-            if cell in game.cells_coordinates or cell[0] < 0:
+            rounded_cell = [cell[0], round(cell[1])]
+            print(rounded_cell)
+            if rounded_cell in game.cells_coordinates: 
                 moving_allowed = False
                 break
-
-        if moving_allowed:
-            self.x -= 1
-
-
-    def move_to_right(self):
-        game.get_all_object_coordinates()
-        self.coordinates_list = []
-        for column in range(4):
-            for row in range(4):
-                if self.figure[row*4 + column] != 0:
-                    self.coordinates_list.append([column + self.x + 1, row + self.y])
-        
-        moving_allowed = True    
+                
         for cell in self.coordinates_list:
-            if cell in game.cells_coordinates or cell[0] > 9:
-                moving_allowed = False
-                break
+            if direction == 'right':
+                if cell in game.cells_coordinates or cell[0] > 9:
+                    moving_allowed = False
+                    break
+            else:
+                if cell in game.cells_coordinates or cell[0] < 0:
+                    moving_allowed = False
+                    break
 
         if moving_allowed:
-            self.x += 1
-
-
+            if direction == 'right':
+                self.x += 1
+            else:
+                self.x -= 1
 
 game = Game()
 figure = Figures(x = 3, y = 0)
 clock = pygame.time.Clock()
+
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.KEYDOWN and game.is_game_started == False and game.game_over == False and event.key != K_F1:
             game.is_game_started = True
             figure.generate_figure()
-        elif event.type == pygame.KEYDOWN:
-            if event.key == K_F1:
-                game.restart_game()
-            elif event.key == K_RIGHT:
-                figure.move_to_right()
+        elif event.type == pygame.KEYDOWN and event.key == K_F1:
+            game.restart_game()
+            game.game_over = False
+        elif event.type == pygame.KEYDOWN and game.is_game_started == True:
+            if event.key == K_RIGHT:
+                # figure.move_to_right()
+                figure.check_collision('right')
             elif event.key == K_LEFT:
-                figure.move_to_left()
+                figure.check_collision('left')
             elif event.key == K_UP:
                 figure.rotate_figure()
 
+ 
+    screen.fill((10, 10, 10))
     if game.is_game_started == False:
-        screen.fill((10, 10, 10))
         game.draw_menu()
     else:
         figure.falling_collision()
         game.check_for_filled_line()
+        game.inrease_level()
 
-    #drawing
+    if game.game_over == True:
+        game.draw_game_over()
     if game.is_game_started == True:
-        screen.fill((10, 10, 10))
         game.draw_field()
         figure.draw_figure()
+
     pygame.display.flip()
-    clock.tick(60)
+    clock.tick(fps)
